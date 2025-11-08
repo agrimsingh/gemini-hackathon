@@ -1,0 +1,37 @@
+import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import JSZip from 'jszip';
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const roomId = params.id;
+
+  const { data: files, error } = await supabaseAdmin
+    .from('files')
+    .select('path, content')
+    .eq('room_id', roomId);
+
+  if (error) {
+    return NextResponse.json({ error: 'Failed to fetch files' }, { status: 500 });
+  }
+
+  const zip = new JSZip();
+
+  if (files) {
+    files.forEach((file) => {
+      zip.file(file.path, file.content);
+    });
+  }
+
+  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+
+  return new NextResponse(zipBuffer, {
+    headers: {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="dream-sandbox-${roomId.slice(0, 8)}.zip"`,
+    },
+  });
+}
+
