@@ -38,3 +38,29 @@ export type PromptEvent = {
   created_at: string;
 };
 
+export type ConflictInfo = {
+  promptIds: string[];
+  type: 'mutually-exclusive' | 'contradictory';
+  winner: string; // prompt id that won
+  reasoning: string;
+  confidence: number; // 0-1
+};
+
+export type AdditiveGroup = {
+  promptIds: string[];
+  explanation: string;
+};
+
+export type PromptAnalysis = {
+  id: string;
+  room_id: string;
+  created_at: string;
+  prompt_event_ids: string[];
+  analysis_json: {
+    additive: AdditiveGroup[];
+    conflicts: ConflictInfo[];
+    prioritizedPrompts: string[]; // ordered by priority
+  };
+  thinking_trace: string; // raw thinking from Gemini
+};
+

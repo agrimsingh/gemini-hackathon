@@ -12,6 +12,7 @@ interface PreviewSandboxProps {
 export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
   const [files, setFiles] = useState<Map<string, string>>(new Map());
   const [htmlContent, setHtmlContent] = useState<string>('');
+  const [isBuilding, setIsBuilding] = useState(false);
 
   // Load initial files from database
   useEffect(() => {
@@ -55,12 +56,32 @@ export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
             updatePreview(updated);
             return updated;
           });
+          // Building is done when patch arrives
+          setIsBuilding(false);
         }
       )
       .subscribe();
 
     return () => {
       channel.unsubscribe();
+    };
+  }, [roomId]);
+
+  // Subscribe to AI status for building overlay
+  useEffect(() => {
+    const aiChannel = supabase.channel(`room:${roomId}:ai`);
+    
+    aiChannel
+      .on('broadcast', { event: 'ai_status' }, ({ payload }) => {
+        const update = payload as { phase: string; status: string };
+        if (update.phase === 'building') {
+          setIsBuilding(update.status === 'started' || update.status === 'progress');
+        }
+      })
+      .subscribe();
+
+    return () => {
+      aiChannel.unsubscribe();
     };
   }, [roomId]);
 
@@ -75,7 +96,7 @@ export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dream Sandbox</title>
+  <title>Vibe de Deux</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -91,7 +112,7 @@ export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
 </head>
 <body>
   <div>
-    <h1>Dream Sandbox</h1>
+    <h1>Vibe de Deux</h1>
     <p>Waiting for code generation...</p>
   </div>
 </body>
@@ -102,18 +123,28 @@ export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
   }
 
   return (
-    <div className="w-full h-full bg-[#171717] rounded-lg border border-gray-800 overflow-hidden">
+    <div className="w-full h-full bg-[#171717] rounded-lg border border-gray-800 overflow-hidden relative">
       {files.size === 0 ? (
         <div className="w-full h-full flex items-center justify-center text-gray-500">
           Waiting for code...
         </div>
       ) : (
-        <iframe
-          srcDoc={htmlContent}
-          className="w-full h-full border-0"
-          sandbox="allow-scripts"
-          title="Preview"
-        />
+        <>
+          <iframe
+            srcDoc={htmlContent}
+            className="w-full h-full border-0"
+            sandbox="allow-scripts"
+            title="Preview"
+          />
+          {isBuilding && (
+            <div className="absolute inset-0 bg-[#0c0c0c]/80 flex items-center justify-center z-10">
+              <div className="bg-[#171717] border border-gray-800 rounded-lg px-6 py-4 flex items-center gap-3">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-gray-300 font-medium">Building...</span>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

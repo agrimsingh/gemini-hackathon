@@ -4,16 +4,21 @@ import { useState, useEffect, useRef } from 'react';
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { createPromptEvent } from '@/app/rooms/[id]/events';
+import { useRoomPresence } from '@/lib/useRoomPresence';
 
 interface PromptEditorProps {
   roomId: string;
   participantId: string;
+  displayName: string;
+  color: string;
 }
 
-export default function PromptEditor({ roomId, participantId }: PromptEditorProps) {
+export default function PromptEditor({ roomId, participantId, displayName, color }: PromptEditorProps) {
   const [text, setText] = useState('');
   const ydocRef = useRef<Y.Doc | null>(null);
   const ytextRef = useRef<Y.Text | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { updatePresence } = useRoomPresence(roomId, participantId, displayName, color);
 
   useEffect(() => {
     const ydoc = new Y.Doc();
@@ -35,12 +40,21 @@ export default function PromptEditor({ roomId, participantId }: PromptEditorProp
     return () => {
       persistence.destroy();
       ydoc.destroy();
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, [roomId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
+
+    // Clear typing status
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    updatePresence({ typing: false });
 
     try {
       await createPromptEvent(roomId, participantId, 'text', text);
@@ -66,6 +80,19 @@ export default function PromptEditor({ roomId, participantId }: PromptEditorProp
         ytextRef.current.insert(0, newText);
       }
     }
+
+    // Update typing presence
+    updatePresence({ typing: true });
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set typing to false after 700ms of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      updatePresence({ typing: false });
+    }, 700);
   };
 
   return (

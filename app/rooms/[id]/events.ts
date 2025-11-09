@@ -2,6 +2,8 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { v4 as uuidv4 } from 'uuid';
+import { detectFinishIntent } from '@/lib/finishUtils';
+import { requestFinish } from './finish';
 
 export async function createPromptEvent(
   roomId: string,
@@ -24,6 +26,14 @@ export async function createPromptEvent(
     .single();
 
   if (error) throw error;
+
+  // Natural language detection for finish intent
+  if (kind === 'text' && text && detectFinishIntent(text)) {
+    console.log('[Events] Detected finish intent in prompt:', text);
+    // Attempt to auto-request finish (will fail gracefully if already requested)
+    await requestFinish(roomId, participantId);
+  }
+
   return data;
 }
 

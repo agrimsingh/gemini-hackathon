@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dream Sandbox",
+  title: "Vibe de Deux",
   description: "Realtime collaborative AI code generation",
 };
 

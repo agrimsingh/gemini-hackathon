@@ -40,7 +40,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-6">
-        <h1 className="text-4xl font-bold text-center">Dream Sandbox</h1>
+        <h1 className="text-4xl font-bold text-center">Vibe de Deux</h1>
         <p className="text-gray-400 text-center">
           Realtime collaborative AI code generation
         </p>
