@@ -44,17 +44,17 @@ export async function GET(
       };
 
       try {
-        // Get the timestamp of the most recent analysis
+        // Get the timestamp of the last processed event
         const { data: lastAnalysis } = await supabaseAdmin
           .from("prompt_analyses")
-          .select("created_at")
+          .select("last_processed_event_timestamp")
           .eq("room_id", roomId)
           .order("created_at", { ascending: false })
           .limit(1)
           .single();
 
-        const cutoffTime = lastAnalysis?.created_at
-          ? lastAnalysis.created_at
+        const cutoffTime = lastAnalysis?.last_processed_event_timestamp
+          ? lastAnalysis.last_processed_event_timestamp
           : new Date(Date.now() - 15000).toISOString();
 
         const { data: events } = await supabaseAdmin
@@ -106,6 +106,12 @@ export async function GET(
           throw new Error("No analysis result from conflict analyzer");
         }
 
+        // Calculate the max timestamp of processed events
+        const maxEventTimestamp = events.reduce((max, event) => {
+          const eventTime = new Date(event.created_at).getTime();
+          return eventTime > max ? eventTime : max;
+        }, 0);
+
         // Store the analysis in the database
         const analysisId = uuidv4();
         const { error } = await supabaseAdmin
@@ -116,6 +122,7 @@ export async function GET(
             prompt_event_ids: events.map((e) => e.id),
             analysis_json: analysis,
             thinking_trace: thinkingTrace,
+            last_processed_event_timestamp: new Date(maxEventTimestamp).toISOString(),
           });
 
         if (error) throw error;

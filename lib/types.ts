@@ -64,3 +64,17 @@ export type PromptAnalysis = {
   thinking_trace: string; // raw thinking from Gemini
 };
 
+export type RoomCommand = {
+  id: string;
+  room_id: string;
+  profile_id: string | null;
+  content: string;
+  created_at: string;
+};
+
+export type SynthesizedPrompt = {
+  summary: string;
+  topCommands: Array<{ text: string; count: number }>;
+  rawCommands: string[];
+};
+

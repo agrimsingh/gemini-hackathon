@@ -205,8 +205,8 @@ The platform subscribes to database changes for instant updates:
 
 3. **Design Specs** (`design_specs` table)
    - Channel: `room:{roomId}:activity-specs`, `room:{roomId}:specs`
-   - Triggers: Heatmap weight updates, theme variable application
-   - Used by: ActivityFeed, HeatmapOverlay
+   - Triggers: Theme variable application
+   - Used by: ActivityFeed
 
 4. **Patches** (`patches` table)
    - Channel: `room:{roomId}:activity-patches`, `room:{roomId}:patches`

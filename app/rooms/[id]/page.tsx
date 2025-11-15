@@ -4,21 +4,15 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { joinRoom } from "./join";
-import { usePlannerBuilder } from "@/lib/plannerHook";
 import type { Participant } from "@/lib/types";
 import PresenceRings from "@/components/PresenceRings";
-import PromptEditor from "@/components/PromptEditor";
+import CommandChat from "@/components/CommandChat";
 import PreviewSandbox from "@/components/PreviewSandbox";
-import HeatmapOverlay from "@/components/HeatmapOverlay";
-import Controls from "@/components/Controls";
 import DiffSidebar from "@/components/DiffSidebar";
 import ThinkingDisplay from "@/components/ThinkingDisplay";
-import FinishApprovalModal from "@/components/FinishApprovalModal";
-import FinalReport from "@/components/FinalReport";
 import AIStatusTimeline from "@/components/AIStatusTimeline";
 import ActivityFeed from "@/components/ActivityFeed";
 import { useRoomPresence } from "@/lib/useRoomPresence";
-import { requestFinish, approveFinish, rejectFinish, getFinishStatus } from "./finish";
 
 export default function RoomPage() {
   const params = useParams();
@@ -29,11 +23,7 @@ export default function RoomPage() {
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [isJoining, setIsJoining] = useState(true);
-  const [finishRequest, setFinishRequest] = useState<any>(null);
-  const [showFinalReport, setShowFinalReport] = useState(false);
   const joiningRef = useRef(false);
-
-  usePlannerBuilder({ roomId });
 
   const currentParticipant = participants.find((p) => p.id === participantId);
   const { presenceById } = useRoomPresence(
@@ -159,51 +149,22 @@ export default function RoomPage() {
     };
   }, [roomId]); // Only depend on roomId, not displayName
 
-  // Subscribe to finish requests
+  // Tick timer - periodically synthesize commands and trigger AI
   useEffect(() => {
-    if (!participantId) return;
+    if (!participantId || !roomId) return;
 
-    let mounted = true;
-
-    // Initial fetch
-    getFinishStatus(roomId).then((data) => {
-      if (mounted && data) {
-        setFinishRequest(data);
-        if (data.status === 'approved') {
-          setShowFinalReport(true);
-        }
+    const tickInterval = setInterval(async () => {
+      try {
+        await fetch(`/api/rooms/${roomId}/tick`, {
+          method: 'POST',
+        });
+      } catch (error) {
+        console.error('[Tick] Failed to tick:', error);
       }
-    });
-
-    // Subscribe to changes
-    const finishChannel = supabase
-      .channel(`room:${roomId}:finishes`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'room_finishes',
-          filter: `room_id=eq.${roomId}`,
-        },
-        async (payload) => {
-          if (mounted) {
-            const newData = payload.new as any;
-            setFinishRequest(newData);
-            
-            if (newData.status === 'approved') {
-              setShowFinalReport(true);
-            } else if (newData.status === 'rejected') {
-              setFinishRequest(null);
-            }
-          }
-        }
-      )
-      .subscribe();
+    }, 5000); // Tick every 5 seconds
 
     return () => {
-      mounted = false;
-      finishChannel.unsubscribe();
+      clearInterval(tickInterval);
     };
   }, [roomId, participantId]);
 
@@ -222,39 +183,6 @@ export default function RoomPage() {
     if (finishRequest.requester_id === participantId) return 'you_requested';
     return 'other_requested';
   };
-
-  const handleFinishRequest = async () => {
-    await requestFinish(roomId, participantId);
-  };
-
-  const handleFinishApprove = async () => {
-    await approveFinish(roomId, participantId);
-  };
-
-  const handleFinishReject = async () => {
-    if (finishRequest) {
-      await rejectFinish(roomId, finishRequest.id);
-    }
-  };
-
-  // Show final report if approved
-  if (showFinalReport && finishRequest?.final_report_json) {
-    return (
-      <FinalReport
-        reportData={finishRequest.final_report_json}
-        onClose={() => setShowFinalReport(false)}
-      />
-    );
-  }
-
-  // Show approval modal if other player requested finish
-  const showApprovalModal = finishRequest && 
-    finishRequest.status === 'pending' && 
-    finishRequest.requester_id !== participantId;
-
-  const requesterName = showApprovalModal
-    ? participants.find((p) => p.id === finishRequest.requester_id)?.display_name || 'Other player'
-    : '';
 
   return (
     <div className="min-h-screen bg-[#0c0c0c] text-white flex flex-col">
@@ -284,13 +212,14 @@ export default function RoomPage() {
         />
       </header>
 
-      <div className="flex-1 grid grid-cols-[400px_1fr_300px] gap-4 p-4">
+      <div className="flex-1 grid grid-cols-[400px_1fr] gap-4 p-4">
         <div className="space-y-4">
-          <PromptEditor 
+          <CommandChat 
             roomId={roomId} 
             participantId={participantId}
             displayName={displayName}
             color={currentParticipant?.color || '#666'}
+            participants={participants}
           />
           <ThinkingDisplay roomId={roomId} />
           <AIStatusTimeline roomId={roomId} />
@@ -300,33 +229,9 @@ export default function RoomPage() {
 
         <div className="relative">
           <PreviewSandbox roomId={roomId} />
-          <HeatmapOverlay participants={participants} roomId={roomId} />
         </div>
 
-        <div>
-          <Controls
-            roomId={roomId}
-            participantId={participantId}
-            finishStatus={getFinishStatusForUI()}
-            onFinishRequest={handleFinishRequest}
-            onFinishApprove={handleFinishApprove}
-            onFinishReject={handleFinishReject}
-          />
-        </div>
       </div>
-
-      {/* Finish approval modal */}
-      {showApprovalModal && (
-        <FinishApprovalModal
-          roomId={roomId}
-          participantId={participantId}
-          finishRequestId={finishRequest.id}
-          requesterName={requesterName}
-          onApprove={handleFinishApprove}
-          onReject={handleFinishReject}
-          onClose={() => {}}
-        />
-      )}
     </div>
   );
 }

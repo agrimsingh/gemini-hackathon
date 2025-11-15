@@ -114,16 +114,38 @@ export default function ThinkingDisplay({ roomId }: ThinkingDisplayProps) {
 
     // Load the most recent analysis
     async function loadLatest() {
-      const { data } = await supabase
-        .from("prompt_analyses")
-        .select("*")
-        .eq("room_id", roomId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      if (data) {
-        setLatestAnalysis(data as PromptAnalysis);
+      if (!supabaseUrl || !supabaseAnonKey) return;
+
+      try {
+        const response = await fetch(
+          `${supabaseUrl}/rest/v1/prompt_analyses?select=*&room_id=eq.${roomId}&order=created_at.desc&limit=1`,
+          {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          console.warn(
+            "[ThinkingDisplay] Failed to load latest analysis:",
+            response.status,
+            response.statusText
+          );
+          return;
+        }
+
+        const data = (await response.json()) as PromptAnalysis[];
+        if (data?.length) {
+          setLatestAnalysis(data[0]);
+        }
+      } catch (error) {
+        console.error("[ThinkingDisplay] Error loading latest analysis:", error);
       }
     }
 

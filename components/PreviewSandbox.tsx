@@ -2,62 +2,54 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { applyFsDiff } from '@/lib/fsDiff';
-import type { FilePatch } from '@/lib/types';
 
 interface PreviewSandboxProps {
   roomId: string;
 }
 
 export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
-  const [files, setFiles] = useState<Map<string, string>>(new Map());
-  const [htmlContent, setHtmlContent] = useState<string>('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
+  const [buildingMessage, setBuildingMessage] = useState<string | null>(null);
 
-  // Load initial files from database
+  // Load initial v0 preview URL from room metadata
   useEffect(() => {
-    async function loadFiles() {
+    async function loadPreviewUrl() {
       const { data, error } = await supabase
-        .from('files')
-        .select('path, content')
-        .eq('room_id', roomId);
+        .from('rooms')
+        .select('v0_preview_url')
+        .eq('id', roomId)
+        .single();
 
       if (error) {
-        console.error('[PreviewSandbox] Error loading files:', error);
+        console.error('[PreviewSandbox] Error loading preview URL:', error);
         return;
       }
 
-      if (data && data.length > 0) {
-        const fileMap = new Map<string, string>();
-        data.forEach((f) => fileMap.set(f.path, f.content));
-        setFiles(fileMap);
-        updatePreview(fileMap);
+      if (data?.v0_preview_url) {
+        setPreviewUrl(data.v0_preview_url);
       }
     }
-    loadFiles();
+    loadPreviewUrl();
   }, [roomId]);
 
-  // Subscribe to real-time patches
+  // Subscribe to room updates for preview URL changes
   useEffect(() => {
     const channel = supabase
-      .channel(`room:${roomId}:patches`)
+      .channel(`room:${roomId}:preview`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: 'UPDATE',
           schema: 'public',
-          table: 'patches',
-          filter: `room_id=eq.${roomId}`,
+          table: 'rooms',
+          filter: `id=eq.${roomId}`,
         },
-        async (payload) => {
-          const patch = payload.new.patch_json as FilePatch;
-          setFiles((prev) => {
-            const updated = applyFsDiff(prev, patch);
-            updatePreview(updated);
-            return updated;
-          });
-          // Building is done when patch arrives
-          setIsBuilding(false);
+        (payload) => {
+          const newPreviewUrl = payload.new.v0_preview_url as string | null;
+          if (newPreviewUrl) {
+            setPreviewUrl(newPreviewUrl);
+          }
         }
       )
       .subscribe();
@@ -73,9 +65,20 @@ export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
     
     aiChannel
       .on('broadcast', { event: 'ai_status' }, ({ payload }) => {
-        const update = payload as { phase: string; status: string };
+        const update = payload as {
+          phase: string;
+          status: string;
+          message?: string;
+        };
         if (update.phase === 'building') {
-          setIsBuilding(update.status === 'started' || update.status === 'progress');
+          const isNowBuilding =
+            update.status === 'started' || update.status === 'progress';
+          setIsBuilding(isNowBuilding);
+          setBuildingMessage(
+            isNowBuilding
+              ? update.message || 'Building with v0...'
+              : update.message || null
+          );
         }
       })
       .subscribe();
@@ -85,62 +88,38 @@ export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
     };
   }, [roomId]);
 
-  function updatePreview(fileMap: Map<string, string>) {
-    // Get the index.html or create a combined view
-    let html = fileMap.get('index.html') || '';
-    
-    if (!html) {
-      // Fallback: show waiting message
-      html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vibe de Deux</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      background: #0c0c0c;
-      color: #fff;
-    }
-  </style>
-</head>
-<body>
-  <div>
-    <h1>Vibe de Deux</h1>
-    <p>Waiting for code generation...</p>
-  </div>
-</body>
-</html>`;
-    }
-
-    setHtmlContent(html);
-  }
-
   return (
     <div className="w-full h-full bg-[#171717] rounded-lg border border-gray-800 overflow-hidden relative">
-      {files.size === 0 ? (
+      {!previewUrl ? (
         <div className="w-full h-full flex items-center justify-center text-gray-500">
-          Waiting for code...
+          <div className="text-center">
+            <p className="text-base font-medium">
+              {isBuilding
+                ? 'Sending prompts to v0 for the build...'
+                : 'Waiting for code...'}
+            </p>
+            {isBuilding && (
+              <p className="text-sm text-gray-400 mt-1">
+                {buildingMessage || 'Preparing the sandbox.'}
+              </p>
+            )}
+          </div>
         </div>
       ) : (
         <>
           <iframe
-            srcDoc={htmlContent}
+            src={previewUrl}
             className="w-full h-full border-0"
-            sandbox="allow-scripts"
-            title="Preview"
+            title="v0 Preview"
+            allow="clipboard-read; clipboard-write"
           />
           {isBuilding && (
-            <div className="absolute inset-0 bg-[#0c0c0c]/80 flex items-center justify-center z-10">
+            <div className="absolute inset-0 bg-[#0c0c0c]/80 flex items-center justify-center z-10 pointer-events-none">
               <div className="bg-[#171717] border border-gray-800 rounded-lg px-6 py-4 flex items-center gap-3">
                 <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-gray-300 font-medium">Building...</span>
+                <span className="text-gray-300 font-medium">
+                  {buildingMessage || 'Building...'}
+                </span>
               </div>
             </div>
           )}

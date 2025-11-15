@@ -24,3 +24,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE room_finishes;
 -- This allows service role to insert/select/update
 -- Adjust as needed for your security model
 
+
