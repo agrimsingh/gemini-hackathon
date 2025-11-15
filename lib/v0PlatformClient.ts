@@ -131,7 +131,7 @@ export class V0PlatformClient {
         ? `New room ${roomContext} is controlling this project.`
         : 'New room is controlling this project.',
       system: roomContext
-        ? `This v0 project powers room ${roomContext} inside Vibe de Deux.`
+        ? `This project powers room ${roomContext} inside Vibe de Deux.`
         : 'This project is controlled by Vibe de Deux.',
     });
 

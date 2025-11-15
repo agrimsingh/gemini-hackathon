@@ -70,7 +70,7 @@ export default function DiffSidebar({ roomId }: DiffSidebarProps) {
     }
 
     return {
-      summary: patchData.summary || 'v0 update',
+      summary: patchData.summary || 'Update',
       commands: Array.isArray(patchData.commands) ? patchData.commands : [],
       commandCount: patchData.commandCount || 0,
     };

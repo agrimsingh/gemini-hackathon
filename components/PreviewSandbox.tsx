@@ -76,7 +76,7 @@ export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
           setIsBuilding(isNowBuilding);
           setBuildingMessage(
             isNowBuilding
-              ? update.message || 'Building with v0...'
+              ? update.message || 'Building...'
               : update.message || null
           );
         }
@@ -95,7 +95,7 @@ export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
           <div className="text-center">
             <p className="text-base font-medium">
               {isBuilding
-                ? 'Sending prompts to v0 for the build...'
+                ? 'Building your app...'
                 : 'Waiting for code...'}
             </p>
             {isBuilding && (
@@ -110,7 +110,7 @@ export default function PreviewSandbox({ roomId }: PreviewSandboxProps) {
           <iframe
             src={previewUrl}
             className="w-full h-full border-0"
-            title="v0 Preview"
+            title="Vibe de Deux Preview"
             allow="clipboard-read; clipboard-write"
           />
           {isBuilding && (

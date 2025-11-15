@@ -60,7 +60,7 @@ export async function POST(
 
     await broadcastStatus(
       'started',
-      `Sending ${synthesized.topCommands.length} command(s) to v0`,
+      `Processing ${synthesized.topCommands.length} command(s)`,
       20
     );
 
@@ -80,7 +80,7 @@ export async function POST(
       });
     }
 
-    await broadcastStatus('progress', 'v0 is updating the Next.js project', 65);
+    await broadcastStatus('progress', 'Vibe de Deux is updating the project', 65);
 
     const applyResult = await v0PlatformClient.applyPromptToProject(
       currentProjectId,
@@ -101,7 +101,7 @@ export async function POST(
 
     await broadcastStatus(
       'completed',
-      'v0 preview refreshed',
+      'Preview refreshed',
       applyResult.previewUrl ? 100 : 90
     );
 
