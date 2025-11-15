@@ -114,7 +114,7 @@ export class V0PlatformClient {
       chatId,
       versionId,
       format: 'zip',
-      includeDefaultFiles: 'true',
+      includeDefaultFiles: true,
     });
 
     return result as ArrayBuffer;
