@@ -9,11 +9,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       Accept: 'application/json',
     },
   },
-  postgrest: {
-    headers: {
-      Accept: 'application/json',
-    },
-  },
   realtime: {
     params: {
       eventsPerSecond: 10,

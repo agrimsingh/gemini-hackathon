@@ -61,7 +61,6 @@ export class V0PlatformClient {
     const project = await v0.projects.create({
       name: `vibe-room-${roomId}`,
       description: `Collaborative project for room ${roomId}`,
-      template: 'nextjs',
     });
 
     const chatId = await this.initializeChat(project.id, roomId);
@@ -86,16 +85,16 @@ export class V0PlatformClient {
     });
 
     const versionId =
-      response.latestVersion?.id ?? response.version?.id ?? null;
+      (response as any).latestVersion?.id ?? (response as any).version?.id ?? null;
 
     // v0 SDK returns chat.demo as the preview URL
-    const previewUrl = (response as any).demo ?? getPreviewUrl(response.latestVersion) ?? getPreviewUrl(response.version);
+    const previewUrl = (response as any).demo ?? getPreviewUrl((response as any).latestVersion) ?? getPreviewUrl((response as any).version);
 
     // Create deployment but don't wait for it
     const deployment = await v0.deployments.create({
       projectId,
       chatId,
-      ...(versionId ? { versionId } : {}),
+      versionId: versionId || undefined,
     });
 
     return {
@@ -105,20 +104,6 @@ export class V0PlatformClient {
       deploymentId: deployment.id,
       previewUrl,
     };
-  }
-
-  async getLatestPreviewUrl(projectId: string): Promise<string | null> {
-    const listResult = await v0.deployments.list({
-      projectId,
-      limit: 1,
-      order: 'desc',
-    });
-
-    const latest = Array.isArray(listResult)
-      ? listResult[0]
-      : listResult?.data?.[0];
-
-    return getPreviewUrl(latest) ?? null;
   }
 
   private async initializeChat(
@@ -135,7 +120,7 @@ export class V0PlatformClient {
         : 'This project is controlled by Vibe de Deux.',
     });
 
-    return chat.id;
+    return (chat as any).id;
   }
 }
 

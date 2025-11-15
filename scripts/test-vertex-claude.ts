@@ -40,7 +40,7 @@ async function main() {
       ],
     });
 
-    const textContent = result.content.find((c: any) => c.type === 'text');
+    const textContent = result.content.find((c: any) => c.type === 'text') as any;
     if (textContent && textContent.text) {
       console.log('✅ Success! Claude responded:');
       console.log(textContent.text);

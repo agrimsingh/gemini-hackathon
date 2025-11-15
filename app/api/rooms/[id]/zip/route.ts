@@ -4,9 +4,9 @@ import JSZip from "jszip";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const roomId = params.id;
+  const { id: roomId } = await params;
 
   const { data: files, error } = await supabaseAdmin
     .from("files")

@@ -176,14 +176,6 @@ export default function RoomPage() {
     );
   }
 
-  // Determine finish status for UI
-  const getFinishStatusForUI = (): 'none' | 'pending' | 'approved' | 'you_requested' | 'other_requested' => {
-    if (!finishRequest) return 'none';
-    if (finishRequest.status === 'approved') return 'approved';
-    if (finishRequest.requester_id === participantId) return 'you_requested';
-    return 'other_requested';
-  };
-
   return (
     <div className="min-h-screen bg-[#0c0c0c] text-white flex flex-col">
       <header className="border-b border-gray-800 p-4 flex items-center justify-between">

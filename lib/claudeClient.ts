@@ -80,7 +80,7 @@ Return ONLY valid JSON, no markdown.`;
     });
 
     // Extract text from response
-    const textContent = result.content.find((c: any) => c.type === 'text');
+    const textContent = result.content.find((c: any) => c.type === 'text') as any;
     if (!textContent || !textContent.text) {
       throw new Error('No text content in Claude response');
     }
@@ -201,7 +201,7 @@ Example structure:
     });
 
     // Extract text from response
-    const textContent = result.content.find((c: any) => c.type === 'text');
+    const textContent = result.content.find((c: any) => c.type === 'text') as any;
     if (!textContent || !textContent.text) {
       throw new Error('No text content in Claude response');
     }
@@ -320,7 +320,7 @@ IMPORTANT:
     });
 
     // Extract text from response
-    const textContent = result.content.find((c: any) => c.type === 'text');
+    const textContent = result.content.find((c: any) => c.type === 'text') as any;
     if (!textContent || !textContent.text) {
       throw new Error('No text content in Claude response');
     }
