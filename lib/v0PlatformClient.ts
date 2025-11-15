@@ -106,6 +106,20 @@ export class V0PlatformClient {
     };
   }
 
+  async downloadVersionFiles(
+    chatId: string,
+    versionId: string
+  ): Promise<ArrayBuffer> {
+    const result = await v0.chats.downloadVersion({
+      chatId,
+      versionId,
+      format: 'zip',
+      includeDefaultFiles: 'true',
+    });
+
+    return result as ArrayBuffer;
+  }
+
   private async initializeChat(
     projectId: string,
     roomContext?: string

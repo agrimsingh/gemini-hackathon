@@ -12,6 +12,7 @@ import DiffSidebar from "@/components/DiffSidebar";
 import ThinkingDisplay from "@/components/ThinkingDisplay";
 import AIStatusTimeline from "@/components/AIStatusTimeline";
 import ActivityFeed from "@/components/ActivityFeed";
+import DownloadButton from "@/components/DownloadButton";
 import { useRoomPresence } from "@/lib/useRoomPresence";
 
 export default function RoomPage() {
@@ -215,6 +216,7 @@ export default function RoomPage() {
           />
           <ThinkingDisplay roomId={roomId} />
           <AIStatusTimeline roomId={roomId} />
+          <DownloadButton roomId={roomId} />
           <ActivityFeed roomId={roomId} participants={participants} />
           <DiffSidebar roomId={roomId} />
         </div>
